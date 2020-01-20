@@ -1,7 +1,8 @@
 # Killer Devouring Snake
 
 This project main purpose is to find the best implementation of an artificial player that maximizes the scores of the famous [Snake][wiki-snake] video game.
-You can find a working demo of it [demo][here].
+
+You can find a working demo of it [here][demo].
 
 ## Rules
 
