@@ -1,6 +1,7 @@
 # Killer Devouring Snake
 
 This project main purpose is to find the best implementation of an artificial player that maximizes the scores of the famous [Snake][wiki-snake] video game.
+You can find a working demo of it [demo][here].
 
 ## Rules
 
@@ -36,6 +37,7 @@ To do this, the shortcut uses the shortest path to the fruit but with the follow
 - every projected next cell must have a higher Hamiltonian index than the previous (except when the previous index is 255);
 - the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions.
 
+[demo]: https://xmamat.github.io/killer-devouring-snake/
 [wiki-snake]: https://en.wikipedia.org/wiki/Snake_(video_game)
 [wiki-bfs]: https://en.wikipedia.org/wiki/Breadth-first_search
 [wiki-hamilton]: https://en.wikipedia.org/wiki/Hamiltonian_path
