@@ -32,11 +32,16 @@ Though this method has the advantage of minimizing the move count, it performs p
 One way to ensure that the snake will never trap itself is to find a circuit that goes through all the cells of the board but only once. This is known as a [Hamiltonian cycle][wiki-hamilton]. To implement it, we first compute the longest path from the head of the snake to its tail end, then we join the tail end to the head. Our longest path implementation here works by extending the shortest path until all the board cells are visited exactly one time.
 With this, we are guaranteed to win the game everytime.
 
-There is one problem with the Hamiltonian cycle though: it takes a very long time for the snake to fill the board. That's because it just repeats following the same circuit without even caring where the fruits are (it will eventually run into them anyway).
-To lower the number of moves without impacting the main goals, the solution we end up with is to try to take shortcuts without "breaking" the Hamiltonian cycle.
-To do this, the shortcut uses the shortest path to the fruit but with the following constraints:
+There is one major problem with the Hamiltonian cycle though: it takes a very long time for the snake to fill the board. That's because it just repeats following the same circuit without even caring where the fruits pop up (it will eventually run into them anyway). Hence, the real challenge here is to lower the number of moves without impacting the main goals (ideally keeping the win rate at 100%).
+
+This is the solution we came up with:
+1. go for the shortest path to the fruit on the condition that we are able to recompute a Hamiltonian cycle based on the projected resulting snake;
+2. if 1. is not possible, try a shortcut without "breaking" the Hamiltonian cycle by following these constraints:
 - every projected next cell must have a higher Hamiltonian index than the previous (except when the previous index is 255);
-- the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions.
+- the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions;
+3. if 2. is not possible either, just follow the initial Hamiltonian cycle.
+
+With the previous we achieved about 70% gain on the move count vs a basic Hamiltonian cycle without loosing a single game.
 
 [demo]: https://xmamat.github.io/killer-devouring-snake/
 [wiki-snake]: https://en.wikipedia.org/wiki/Snake_(video_game)

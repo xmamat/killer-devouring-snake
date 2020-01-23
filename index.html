@@ -17,10 +17,16 @@
     <button onclick="options.togglePlayer()" id='togglePlayer'></button>
     <button onclick="options.speedDown()" id='speedDown'>speed down</button>
     <button onclick="options.speedUp()" id='speedUp'>speed up</button>
+    <button onclick="options.reset()" id='reset'>reset</button>
     <button onclick="options.toggleShowSnakeIndices()" id='toggleShowSnakeIndices'></button>
-    <button onclick="options.toggleShowHamiltonianIndices()" id='toggleShowHamiltonianIndices'></button>
-    <button onclick="options.toggleHamiltonianShortcuts()" id='toggleHamiltonianShortcuts'></button>
   </div>
+  <div>
+    <button onclick="options.toggleShowHamiltonianIndices()" id='toggleShowHamiltonianIndices'></button>
+    <button onclick="options.changeHamiltonianCycleBuildTryCount()" id='changeHamiltonianCycleBuildTryCount'></button>
+    <button onclick="options.changeDirectShortcutTryRate()" id='changeDirectShortcutTryRate'></button>
+    <button onclick="options.changeHamiltonianShortcutTryRate()" id='changeHamiltonianShortcutTryRate'></button>
+  </div>
+  <p id='humanPlayerHint'>move with the WASD or arrow keys</p>
   <div>
     run #<label id='runNumber'></label>
   </div>
@@ -45,51 +51,62 @@
   var context = canvas.getContext('2d');
 
   function play() {
-    var reset = () => {
-      board.clear();
-      snake.start();
-      board.spawnFruit();
-    };
-    reset();
+    utility.reset();
+    statistics.clear();
 
     var loop = () => {
       snake.decide();
       snake.move();
       if (snake.collided || snake.wins()) {
-        reset();
+        utility.reset();
         statistics.refresh();
       }
       options.display();
       statistics.display();
       board.render();
 
-      setTimeout(loop, options.turnIntervalInMilliseconds);
+      setTimeout(loop, options.loopIntervalInMilliseconds);
     };
     loop();
   }
 
   var options = {
     player: 'ai',
-    turnIntervalInMilliseconds: 100,
-    showHamiltonianIndices: false,
-    showSnakeIndices: false,
-    enableHamiltonianShortcuts: true,
+    loopIntervalInMilliseconds: 1,
+    showSnakeIndices: true,
+    showHamiltonianIndices: true,
+    hamiltonianCycleBuildTryCount: 5,
+    directShortcutTryRate: 1,
+    hamiltonianShortcutTryRate: 1,
     
     togglePlayer() {
       this.player = this.player === 'ai' ? 'human' : 'ai';
       if (this.player === 'ai') {
+        this.loopIntervalInMilliseconds = 1;
+        this.showSnakeIndices = true;
+        this.showHamiltonianIndices = true;
+
         window.removeEventListener('keydown', snake.listen);
       } else {
+        this.loopIntervalInMilliseconds = 200;
+        this.showSnakeIndices = false;
+        this.showHamiltonianIndices = false;
+
         window.addEventListener('keydown', snake.listen);
       }
     },
 
     speedDown() {
-      this.turnIntervalInMilliseconds *= 2;
+      this.loopIntervalInMilliseconds *= 2;
     },
 
     speedUp() {
-      this.turnIntervalInMilliseconds /= 2;
+      this.loopIntervalInMilliseconds /= 2;
+    },
+
+    reset() {
+      utility.reset();
+      statistics.clear();
     },
 
     toggleShowSnakeIndices() {
@@ -100,30 +117,56 @@
       this.showHamiltonianIndices = !this.showHamiltonianIndices;
     },
 
-    toggleHamiltonianShortcuts() {
-      this.enableHamiltonianShortcuts = !this.enableHamiltonianShortcuts;
+    changeHamiltonianCycleBuildTryCount() {
+      this.hamiltonianCycleBuildTryCount = this.hamiltonianCycleBuildTryCount < 5 ? this.hamiltonianCycleBuildTryCount + 1 : 1;
+    },
+
+    changeDirectShortcutTryRate() {
+      this.directShortcutTryRate = this.directShortcutTryRate < 1 ? this.directShortcutTryRate + 0.25 : 0;
+    },
+
+    changeHamiltonianShortcutTryRate() {
+      this.hamiltonianShortcutTryRate = this.hamiltonianShortcutTryRate < 1 ? this.hamiltonianShortcutTryRate + 0.25 : 0;
     },
 
     display() {
       document.getElementById('togglePlayer').innerHTML = this.player === 'ai' ?  "let me play" : "let AI play";
       document.getElementById('toggleShowSnakeIndices').innerHTML = this.showSnakeIndices ?  "hide snake indices" : "show snake indices";
-      document.getElementById('toggleShowHamiltonianIndices').innerHTML = this.showHamiltonianIndices ?  "hide Hamiltonian indices" : "show Hamiltonian indices";
+
       if (this.player === 'ai') {
-        document.getElementById('toggleHamiltonianShortcuts').innerHTML = this.enableHamiltonianShortcuts ?  "disable Hamiltonian shortcuts" : "enable Hamiltonian shortcuts";
-        document.getElementById('toggleHamiltonianShortcuts').style.display = 'block';
+        document.getElementById('toggleShowHamiltonianIndices').innerHTML = this.showHamiltonianIndices ?  "hide Hamiltonian indices" : "show Hamiltonian indices";
+        document.getElementById('toggleShowHamiltonianIndices').style.display = 'block';
+
+        document.getElementById('changeHamiltonianCycleBuildTryCount').innerHTML = "change Hamiltonian cycle build try count\n(current: " + options.hamiltonianCycleBuildTryCount + ")";
+        document.getElementById('changeHamiltonianCycleBuildTryCount').style.display = 'block';
+
+        document.getElementById('changeDirectShortcutTryRate').innerHTML = "change direct shortcut try rate\n(current: " + options.directShortcutTryRate * 100 + "%)";
+        document.getElementById('changeDirectShortcutTryRate').style.display = 'block';
+
+        document.getElementById('changeHamiltonianShortcutTryRate').innerHTML = "change Hamiltonian shortcut try rate\n(current: " + options.hamiltonianShortcutTryRate * 100 + "%)";
+        document.getElementById('changeHamiltonianShortcutTryRate').style.display = 'block';
+
+        document.getElementById('humanPlayerHint').style.display = 'none';
       } else {
-        document.getElementById('toggleHamiltonianShortcuts').style.display = 'none';
+        document.getElementById('toggleShowHamiltonianIndices').style.display = 'none';
+        document.getElementById('changeHamiltonianCycleBuildTryCount').style.display = 'none';
+        document.getElementById('changeDirectShortcutTryRate').style.display = 'none';
+        document.getElementById('changeHamiltonianShortcutTryRate').style.display = 'none';
+
+        document.getElementById('humanPlayerHint').style.display = 'block';
       }
     }
   };
 
   var statistics = {
-    runNumber: 1,
-    currentScore: 0,
-    currentMoveCount: 0,
-    meanScore: null,
-    meanMoveCount: null,
-    winCount: 0,
+    clear() {
+      this.runNumber = 1;
+      this.currentScore = 0;
+      this.currentMoveCount = 0;
+      this.meanScore = null;
+      this.meanMoveCount = null;
+      this.winCount = 0;
+    },
 
     display() {
       document.getElementById('runNumber').innerHTML = this.runNumber;
@@ -156,8 +199,6 @@
   var board = {
     width: 16,
     height: 16,
-    map: [],
-    fruit: undefined,
 
     render() {
       var canvasItemWidth = canvas.width / this.width;
@@ -165,7 +206,7 @@
 
       for (var i = 0; i < this.width; i++) {
         for (var j = 0; j < this.height; j++) {
-          switch (this.map[i][j].item) {
+          switch (this.item(i, j)) {
             case ITEMS.EMPTY:
               context.clearRect(i * canvasItemWidth, j * canvasItemHeight, canvasItemWidth, canvasItemHeight);
               break;
@@ -206,12 +247,15 @@
     },
 
     clear() {
+      this.map = [];
       for (var i = 0; i < this.width; i++) {
         this.map[i] = [];
         for (var j = 0; j < this.height; j++) {
-          this.map[i][j] = { item: ITEMS.EMPTY };
+          this.map[i][j] = {};
         }
       }
+      this.fruit = undefined;
+      this.hasHamiltonianCycle = false;
     },
 
     spawnFruit() {
@@ -222,23 +266,30 @@
       var probabilityDenominator = freeBoardCapacity;
       for (var i = 0; i < this.width; i++) {
         for (var j = 0; j < this.height; j++) {
-          if (this.map[i][j].item === ITEMS.EMPTY) {
+          if (this.item(i, j) === ITEMS.EMPTY) {
             if (Math.floor(Math.random() * Math.floor(--probabilityDenominator)) === 0) {
-              this.map[i][j].item = ITEMS.FRUIT;
               this.fruit = { x: i, y: j };
               return;
             }
           }
         }
       }
+    },
+
+    item(x, y) {
+      if (this.fruit && x === this.fruit.x && y === this.fruit.y) {
+        return ITEMS.FRUIT;
+      }
+      for (var i = 0; i < snake.body.length; i++) {
+        if (x === snake.body[i].x && y === snake.body[i].y) {
+          return ITEMS.SNAKE;
+        }
+      }
+      return ITEMS.EMPTY;
     }
   }
 
   var snake = {
-    body: undefined,
-    direction: undefined,
-    collided: undefined,
-
     start() {
       this.body = [];
       var head = {
@@ -246,10 +297,10 @@
         y: Math.floor(board.height / 4) + Math.floor(Math.random() * Math.floor(board.height / 2))
       };
       this.body.push(head);
-      board.map[head.x][head.y].item = ITEMS.SNAKE;
 
       this.direction = [DIRECTIONS.LEFT, DIRECTIONS.RIGHT, DIRECTIONS.UP, DIRECTIONS.DOWN][Math.floor(Math.random() * 4)];
       this.collided = false;
+      this.bestPath = undefined;
     },
 
     decide() {
@@ -257,25 +308,86 @@
         return;
       }
 
-      //the snake length needs to be at least 2 to compute the longest path to the tail end
-      var shortestPathToFruit = ai.shortestPathTo(board.fruit);
-      if (this.body.length < 2) {
-        this.direction = shortestPathToFruit[0];
+      if (this.bestPath && this.bestPath.length > 0) {
+        this.direction = this.bestPath.shift();
         return;
       }
 
-      //the Hamiltonian circuit is the guaranteed safe path
-      if (board.map[this.head().x][this.head().y].hIndex === undefined) {
-        ai.buildHamiltonianCycle();
-      }
-      this.direction = board.map[this.head().x][this.head().y].hDirection;
-
-      //try a shortcut without breaking the Hamiltonian circuit
-      if (options.enableHamiltonianShortcuts && snake.body.length < board.size() * 0.5) { 
-        var hShortcutToFruit = ai.hamiltonianShortcutTo(board.fruit);
-        if (hShortcutToFruit && hShortcutToFruit.length > 0) {
-          this.direction = hShortcutToFruit[0];
+      //1. the snake length needs to be at least 2 to compute the longest path to the tail end
+      //   that is used to build a Hamiltonian cycle
+      if (this.body.length < 2) {
+        var shortestPathToFruit = ai.shortestPathTo(board.fruit);
+        if (shortestPathToFruit && shortestPathToFruit.length > 0) {
+          this.bestPath = shortestPathToFruit;
+          this.direction = this.bestPath.shift();
+          return;
         }
+      }
+
+      //2. go for the shortest path on the condition that we are able to recompute
+      //   a Hamiltonian cycle based on the projected resulting snake
+      if (this.body.length < board.size() * options.directShortcutTryRate) {
+        var shortestPathToFruit = ai.shortestPathTo(board.fruit);
+        if (shortestPathToFruit && shortestPathToFruit.length > 0) {
+          var snakeBackup = [];
+          for (var i = 0; i < this.body.length; i++) {
+            snakeBackup.push(this.body[i]);
+          }
+
+          for (var i = 0; i < shortestPathToFruit.length; i++) {
+            var next = { x: this.body[0].x + shortestPathToFruit[i].x, y: this.body[0].y + shortestPathToFruit[i].y };
+            this.body.unshift(next);
+            if (i < shortestPathToFruit.length - 1) {
+              this.body.pop();
+            }
+          }
+
+          var hamiltonianCycleBackup = undefined;
+          if (board.hasHamiltonianCycle) {
+            hamiltonianCycleBackup = [];
+            for (var i = 0; i < board.width; i++) {
+              hamiltonianCycleBackup[i] = [];
+              for (var j = 0; j < board.height; j++) {
+                hamiltonianCycleBackup[i][j] = { hIndex: board.map[i][j].hIndex, hDirection: board.map[i][j].hDirection };
+              }
+            }
+          }
+
+          if (ai.buildHamiltonianCycle(options.hamiltonianCycleBuildTryCount)) {
+            board.hasHamiltonianCycle = true;
+            this.bestPath = shortestPathToFruit;
+            this.direction = this.bestPath.shift();
+            this.body = snakeBackup;
+            return;
+          } else if (hamiltonianCycleBackup) { //restore the previous Hamiltonian cycle
+            for (var i = 0; i < board.width; i++) {
+              for (var j = 0; j < board.height; j++) {
+                board.map[i][j].hIndex = hamiltonianCycleBackup[i][j].hIndex;
+                board.map[i][j].hDirection = hamiltonianCycleBackup[i][j].hDirection;
+              }
+            }
+          }
+          this.body = snakeBackup;
+        }
+      }
+
+      if (!board.hasHamiltonianCycle) {
+        board.hasHamiltonianCycle = ai.buildHamiltonianCycle(options.hamiltonianCycleBuildTryCount);
+      }
+
+      if (board.hasHamiltonianCycle) {
+        //3. try a shortcut without breaking the Hamiltonian cycle
+        if (snake.body.length < board.size() * options.hamiltonianShortcutTryRate) { 
+          var hShortcutToFruit = ai.hamiltonianShortcutTo(board.fruit);
+          if (hShortcutToFruit && hShortcutToFruit.length > 0) {
+            ai.bestPath = hShortcutToFruit;
+            this.direction = ai.bestPath.shift();
+            return;
+          }
+        }
+
+        //4. just follow the initial Hamiltonian cycle if the previous cannot be achieved
+        this.direction = board.map[this.head().x][this.head().y].hDirection;
       }
     },
 
@@ -311,16 +423,14 @@
         return;
       }
 
-      if (board.map[nextHead.x][nextHead.y].item === ITEMS.FRUIT) {
+      if (board.item(nextHead.x, nextHead.y) === ITEMS.FRUIT) {
         statistics.currentScore++;
         board.spawnFruit();
       } else {
         var previousTailEnd = this.body.pop();
-        board.map[previousTailEnd.x][previousTailEnd.y].item = ITEMS.EMPTY;
       }
 
       this.body.unshift(nextHead);
-      board.map[nextHead.x][nextHead.y].item = ITEMS.SNAKE;
 
       statistics.currentMoveCount++;
     },
@@ -329,7 +439,7 @@
       return position.x < 0 || position.x > board.width - 1 || position.y < 0 || position.y > board.height - 1
         // || snake.body.length > 1 && (position.x === this.head().x + utility.opposite(this.direction).x)
         //   && (position.y === this.head().y + utility.opposite(this.direction).y)
-        || board.map[position.x][position.y].item === ITEMS.SNAKE //auto-collision except when the heads runs into the end of the tail
+        || board.item(position.x, position.y) === ITEMS.SNAKE //auto-collision except when the heads runs into the end of the tail
         && (position.x !== this.tailEnd().x || position.y !== this.tailEnd().y);
     },
 
@@ -347,8 +457,6 @@
   };
 
   var ai = {
-    bestPath: undefined,
-
     //based on https://en.wikipedia.org/wiki/Breadth-first_search
     shortestPathTo(destination, hamiltonian) {
       var visited = new Set();
@@ -368,7 +476,8 @@
           for (var i = 0; i < directions.length; i++) {
             var direction = directions[i];
             var next = { x: current.position.x + direction.x, y: current.position.y + direction.y };
-            if (!snake.collides(next) && (!hamiltonian || board.map[current.position.x][current.position.y].hIndex < board.map[next.x][next.y].hIndex
+            if (!snake.collides(next) && (!hamiltonian //|| Math.abs(board.map[current.position.x][current.position.y].hIndex - board.map[next.x][next.y].hIndex) < snake.body.length
+              || board.map[current.position.x][current.position.y].hIndex < board.map[next.x][next.y].hIndex
               || board.map[current.position.x][current.position.y].hIndex === board.size() - 1)) {
               queue.push({ position: next, path: current.path.concat([direction]), cost: current.cost + 1 });
             }
@@ -429,43 +538,54 @@
     },
 
     //see https://en.wikipedia.org/wiki/Hamiltonian_path
-    buildHamiltonianCycle() {
-      for (var i = 0; i < board.width; i++) {
-        for (var j = 0; j < board.height; j++) {
-          board.map[i][j].hIndex = undefined;
-          board.map[i][j].hDirection = undefined;
+    buildHamiltonianCycle(tryCount) {
+      var clear = () => {
+        for (var i = 0; i < board.width; i++) {
+          for (var j = 0; j < board.height; j++) {
+            board.map[i][j].hIndex = undefined;
+            board.map[i][j].hDirection = undefined;
+          }
         }
-      }
+      };
+      clear();
 
       var path = this.longestPathTo(snake.tailEnd());
-      if (path && path.length > 0) {
-        var index = 0;
-        var current = { x: snake.head().x, y: snake.head().y };
-        
-        for (var i = 0; i < path.length; i++) {
-          var direction = path[i];
-
-          board.map[current.x][current.y].hIndex = index++;
-          board.map[current.x][current.y].hDirection = direction;
-
-          current = { x: current.x + direction.x, y: current.y + direction.y };
-        }
-        
-        for (var i = snake.body.length - 1; i >= 1; i--) {
-          var current = snake.body[i];
-          var next = snake.body[i - 1];
-          var direction = (next.x < current.x) ? DIRECTIONS.LEFT : (next.x > current.x) ? DIRECTIONS.RIGHT
-            : (next.y < current.y) ? DIRECTIONS.UP : DIRECTIONS.DOWN;
-
-          board.map[current.x][current.y].hIndex = index++;
-          board.map[current.x][current.y].hDirection = direction;
-        }
+      if (!path || path.length < 1) {
+        return false;
       }
 
-      //retry until the circuit fully covers the map (thanks to the shuffle)
-      if (index < board.size() - 1) {
-        this.buildHamiltonianCycle();
+      var index = 0;
+      var current = { x: snake.head().x, y: snake.head().y };
+
+      for (var i = 0; i < path.length; i++) {
+        var direction = path[i];
+
+        board.map[current.x][current.y].hIndex = index++;
+        board.map[current.x][current.y].hDirection = direction;
+
+        current = { x: current.x + direction.x, y: current.y + direction.y };
       }
+
+      for (var i = snake.body.length - 1; i >= 1; i--) {
+        var current = snake.body[i];
+        var next = snake.body[i - 1];
+        var direction = (next.x < current.x) ? DIRECTIONS.LEFT : (next.x > current.x) ? DIRECTIONS.RIGHT
+          : (next.y < current.y) ? DIRECTIONS.UP : DIRECTIONS.DOWN;
+
+        board.map[current.x][current.y].hIndex = index++;
+        board.map[current.x][current.y].hDirection = direction;
+      }
+
+      if (index < board.size()) {
+        if (tryCount) {
+          //retry can give different result thanks to the shuffle...
+          return this.buildHamiltonianCycle(tryCount - 1);
+        }
+        //... if not, clear the incomplete cycle so the snake doesn't end up in an infinite loop
+        clear();
+        return false;
+      }
+      return true;
     },
 
     hamiltonianShortcutTo(position) {
@@ -492,7 +612,9 @@
           }
 
           newSnake.unshift(next);
-          newSnake.pop();
+          if (i < shortcut.length - 1) {
+            newSnake.pop();
+          }
         }
         return shortcut;
       }
@@ -500,6 +622,12 @@
   };
 
   var utility = {
+    reset() {
+      board.clear();
+      snake.start();
+      board.spawnFruit();
+    },
+
     shuffle(array) {
       for (var i = array.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
