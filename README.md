@@ -35,13 +35,13 @@ With this, we are guaranteed to win the game everytime.
 There is one major problem with the Hamiltonian cycle though: it takes a very long time for the snake to fill the board. That's because it just repeats following the same circuit without even caring where the fruits pop up (it will eventually run into them anyway). Hence, the real challenge here is to lower the number of moves without impacting the main goals (ideally keeping the win rate at 100%).
 
 This is the solution we came up with:
-1. go for the shortest path to the fruit on the condition that we are able to recompute a Hamiltonian cycle based on the projected resulting snake;
+1. go for a direct shortest path to the fruit (try several different ones) on the condition that we are able to recompute a Hamiltonian cycle based on the projected resulting snake;
 2. if 1. is not possible, try a shortcut without "breaking" the Hamiltonian cycle by following these constraints:
-- every projected next cell must have a higher Hamiltonian index than the previous (except when the previous index is 255);
-- the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions;
+    - every projected next cell must have a higher Hamiltonian index than the previous (except when the previous index is 255);
+    - the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions;
 3. if 2. is not possible either, just follow the initial Hamiltonian cycle.
 
-With the previous we achieved about 70% gain on the move count vs a basic Hamiltonian cycle without loosing a single game.
+With that we achieved about 75% gain on the move count vs a basic Hamiltonian cycle without loosing a single game.
 
 [demo]: https://xmamat.github.io/killer-devouring-snake/
 [wiki-snake]: https://en.wikipedia.org/wiki/Snake_(video_game)

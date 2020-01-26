@@ -22,9 +22,10 @@
   </div>
   <div>
     <button onclick="options.toggleShowHamiltonianIndices()" id='toggleShowHamiltonianIndices'></button>
-    <button onclick="options.changeHamiltonianCycleBuildTryCount()" id='changeHamiltonianCycleBuildTryCount'></button>
     <button onclick="options.changeDirectShortcutTryRate()" id='changeDirectShortcutTryRate'></button>
+    <button onclick="options.changeDirectShortcutTryCount()" id='changeDirectShortcutTryCount'></button>
     <button onclick="options.changeHamiltonianShortcutTryRate()" id='changeHamiltonianShortcutTryRate'></button>
+    <button onclick="options.changeHamiltonianCycleBuildTryCount()" id='changeHamiltonianCycleBuildTryCount'></button>
   </div>
   <p id='humanPlayerHint'>move with the WASD or arrow keys</p>
   <div>
@@ -75,9 +76,10 @@
     loopIntervalInMilliseconds: 1,
     showSnakeIndices: true,
     showHamiltonianIndices: true,
-    hamiltonianCycleBuildTryCount: 5,
     directShortcutTryRate: 1,
+    directShortcutTryCount: 5,
     hamiltonianShortcutTryRate: 1,
+    hamiltonianCycleBuildTryCount: 3,
     
     togglePlayer() {
       this.player = this.player === 'ai' ? 'human' : 'ai';
@@ -117,16 +119,20 @@
       this.showHamiltonianIndices = !this.showHamiltonianIndices;
     },
 
-    changeHamiltonianCycleBuildTryCount() {
-      this.hamiltonianCycleBuildTryCount = this.hamiltonianCycleBuildTryCount < 5 ? this.hamiltonianCycleBuildTryCount + 1 : 1;
-    },
-
     changeDirectShortcutTryRate() {
       this.directShortcutTryRate = this.directShortcutTryRate < 1 ? this.directShortcutTryRate + 0.25 : 0;
     },
 
+    changeDirectShortcutTryCount() {
+      this.directShortcutTryCount = this.directShortcutTryCount < 10 ? this.directShortcutTryCount + 1 : 1;
+    },
+
     changeHamiltonianShortcutTryRate() {
       this.hamiltonianShortcutTryRate = this.hamiltonianShortcutTryRate < 1 ? this.hamiltonianShortcutTryRate + 0.25 : 0;
+    },
+
+    changeHamiltonianCycleBuildTryCount() {
+      this.hamiltonianCycleBuildTryCount = this.hamiltonianCycleBuildTryCount < 5 ? this.hamiltonianCycleBuildTryCount + 1 : 1;
     },
 
     display() {
@@ -137,14 +143,17 @@
         document.getElementById('toggleShowHamiltonianIndices').innerHTML = this.showHamiltonianIndices ?  "hide Hamiltonian indices" : "show Hamiltonian indices";
         document.getElementById('toggleShowHamiltonianIndices').style.display = 'block';
 
-        document.getElementById('changeHamiltonianCycleBuildTryCount').innerHTML = "change Hamiltonian cycle build try count\n(current: " + options.hamiltonianCycleBuildTryCount + ")";
-        document.getElementById('changeHamiltonianCycleBuildTryCount').style.display = 'block';
-
         document.getElementById('changeDirectShortcutTryRate').innerHTML = "change direct shortcut try rate\n(current: " + options.directShortcutTryRate * 100 + "%)";
         document.getElementById('changeDirectShortcutTryRate').style.display = 'block';
 
+        document.getElementById('changeDirectShortcutTryCount').innerHTML = "change direct shortcut try count\n(current: " + options.directShortcutTryCount + ")";
+        document.getElementById('changeDirectShortcutTryCount').style.display = 'block';
+
         document.getElementById('changeHamiltonianShortcutTryRate').innerHTML = "change Hamiltonian shortcut try rate\n(current: " + options.hamiltonianShortcutTryRate * 100 + "%)";
         document.getElementById('changeHamiltonianShortcutTryRate').style.display = 'block';
+
+        document.getElementById('changeHamiltonianCycleBuildTryCount').innerHTML = "change Hamiltonian cycle build try count\n(current: " + options.hamiltonianCycleBuildTryCount + ")";
+        document.getElementById('changeHamiltonianCycleBuildTryCount').style.display = 'block';
 
         document.getElementById('humanPlayerHint').style.display = 'none';
       } else {
@@ -317,57 +326,71 @@
       //   that is used to build a Hamiltonian cycle
       if (this.body.length < 2) {
         var shortestPathToFruit = ai.shortestPathTo(board.fruit);
-        if (shortestPathToFruit && shortestPathToFruit.length > 0) {
+        if (shortestPathToFruit) {
           this.bestPath = shortestPathToFruit;
           this.direction = this.bestPath.shift();
           return;
         }
       }
 
-      //2. go for the shortest path on the condition that we are able to recompute
-      //   a Hamiltonian cycle based on the projected resulting snake
+      //2. go for a direct shortest path to the fruit (try several different ones) on the condition that we are able
+      //   to recompute a Hamiltonian cycle based on the projected resulting snake
       if (this.body.length < board.size() * options.directShortcutTryRate) {
-        var shortestPathToFruit = ai.shortestPathTo(board.fruit);
-        if (shortestPathToFruit && shortestPathToFruit.length > 0) {
-          var snakeBackup = [];
-          for (var i = 0; i < this.body.length; i++) {
-            snakeBackup.push(this.body[i]);
-          }
-
-          for (var i = 0; i < shortestPathToFruit.length; i++) {
-            var next = { x: this.body[0].x + shortestPathToFruit[i].x, y: this.body[0].y + shortestPathToFruit[i].y };
-            this.body.unshift(next);
-            if (i < shortestPathToFruit.length - 1) {
-              this.body.pop();
+        var shortestPathsToFruit = ai.shortestPathsTo(board.fruit);
+        // var shortestPathsToFruit = ai.allShortestPathsTo(board.fruit);
+        for (var t = 0; t < options.directShortcutTryCount; t++) {
+          var nextShortestPathToFruit = shortestPathsToFruit.next();
+          if (!nextShortestPathToFruit.done) {
+            var shortestPathToFruit = nextShortestPathToFruit.value;
+            if (!shortestPathToFruit) {
+              continue;
             }
-          }
 
-          var hamiltonianCycleBackup = undefined;
-          if (board.hasHamiltonianCycle) {
-            hamiltonianCycleBackup = [];
-            for (var i = 0; i < board.width; i++) {
-              hamiltonianCycleBackup[i] = [];
-              for (var j = 0; j < board.height; j++) {
-                hamiltonianCycleBackup[i][j] = { hIndex: board.map[i][j].hIndex, hDirection: board.map[i][j].hDirection };
+            var snakeBackup = [];
+            for (var i = 0; i < this.body.length; i++) {
+              snakeBackup.push(this.body[i]);
+            }
+
+            for (var i = 0; i < shortestPathToFruit.length; i++) {
+              var next = { x: this.body[0].x + shortestPathToFruit[i].x, y: this.body[0].y + shortestPathToFruit[i].y };
+              this.body.unshift(next);
+              if (i < shortestPathToFruit.length - 1) {
+                this.body.pop();
               }
             }
-          }
 
-          if (ai.buildHamiltonianCycle(options.hamiltonianCycleBuildTryCount)) {
-            board.hasHamiltonianCycle = true;
-            this.bestPath = shortestPathToFruit;
-            this.direction = this.bestPath.shift();
+            var hamiltonianCycleBackup = undefined;
+            if (board.hasHamiltonianCycle) {
+              hamiltonianCycleBackup = [];
+              for (var i = 0; i < board.width; i++) {
+                hamiltonianCycleBackup[i] = [];
+                for (var j = 0; j < board.height; j++) {
+                  hamiltonianCycleBackup[i][j] = { hIndex: board.map[i][j].hIndex, hDirection: board.map[i][j].hDirection };
+                }
+              }
+            }
+
+            if (ai.buildHamiltonianCycle(options.hamiltonianCycleBuildTryCount)) {
+              board.hasHamiltonianCycle = true;
+              this.bestPath = shortestPathToFruit;
+              this.direction = this.bestPath.shift();
+              this.body = snakeBackup;
+              return;
+            }
+
+            //restore previous snake and Hamiltonian cycle
             this.body = snakeBackup;
-            return;
-          } else if (hamiltonianCycleBackup) { //restore the previous Hamiltonian cycle
-            for (var i = 0; i < board.width; i++) {
-              for (var j = 0; j < board.height; j++) {
-                board.map[i][j].hIndex = hamiltonianCycleBackup[i][j].hIndex;
-                board.map[i][j].hDirection = hamiltonianCycleBackup[i][j].hDirection;
+            if (hamiltonianCycleBackup) {
+              for (var i = 0; i < board.width; i++) {
+                for (var j = 0; j < board.height; j++) {
+                  board.map[i][j].hIndex = hamiltonianCycleBackup[i][j].hIndex;
+                  board.map[i][j].hDirection = hamiltonianCycleBackup[i][j].hDirection;
+                }
               }
             }
+
+            nextShortestPathToFruit = shortestPathsToFruit.next();
           }
-          this.body = snakeBackup;
         }
       }
 
@@ -379,7 +402,7 @@
         //3. try a shortcut without breaking the Hamiltonian cycle
         if (snake.body.length < board.size() * options.hamiltonianShortcutTryRate) { 
           var hShortcutToFruit = ai.hamiltonianShortcutTo(board.fruit);
-          if (hShortcutToFruit && hShortcutToFruit.length > 0) {
+          if (hShortcutToFruit) {
             ai.bestPath = hShortcutToFruit;
             this.direction = ai.bestPath.shift();
             return;
@@ -458,18 +481,22 @@
 
   var ai = {
     //based on https://en.wikipedia.org/wiki/Breadth-first_search
-    shortestPathTo(destination, hamiltonian) {
-      var visited = new Set();
+    shortestPathTo(destination, hamiltonian, returnVisited) {
+      var visited = new Map();
 
       var queue = [];
       queue.push({ position: { x: snake.head().x, y: snake.head().y }, path: [], cost: 0 });
       while (queue.length > 0) {
         var current = queue.shift();
         if (current.position.x === destination.x && current.position.y === destination.y) {
+          if (returnVisited) { //used only by allShortestPathsTo
+            visited.set(current.position.x + '-' + current.position.y, current);
+            return visited;
+          }
           return current.path;
         }
         if (!visited.has(current.position.x + '-' + current.position.y)) {
-          visited.add(current.position.x + '-' + current.position.y);
+          visited.set(current.position.x + '-' + current.position.y, current);
 
           var directions = [DIRECTIONS.LEFT, DIRECTIONS.RIGHT, DIRECTIONS.UP, DIRECTIONS.DOWN];
           utility.shuffle(directions);
@@ -486,10 +513,46 @@
       }
     },
 
+    //this should give different paths thanks to the shuffle
+    shortestPathsTo: function*(destination, tryCount, hamiltonian) {
+      while (true) {
+        yield this.shortestPathTo(destination, hamiltonian);
+      }
+    },
+
+    //based on https://en.wikipedia.org/wiki/Depth-first_search
+    //for performance reasons we don't use this for now (instead we use shortestPathsTo)
+    //see how to get all the paths with acceptable performance
+    allShortestPathsTo(destination, hamiltonian) {
+      var dfs = function*(current, destination, map, path, direction) {
+        if (direction) {
+          path.push(direction);
+        }
+        if (current.x === destination.x && current.y === destination.y) {
+          yield path;
+        } else if (map) {
+          var mapCurrent = map.get(current.x + '-' + current.y);
+          if (mapCurrent) {
+            var directions = [DIRECTIONS.LEFT, DIRECTIONS.RIGHT, DIRECTIONS.UP, DIRECTIONS.DOWN];
+            for (var i = 0; i < directions.length; i++) {
+              var direction = directions[i];
+              var next = { x: current.x + direction.x, y: current.y + direction.y };
+              var mapNext = map.get(next.x + '-' + next.y);
+              if (mapNext && mapNext.cost === mapCurrent.cost + 1) {
+                yield* dfs(next, destination, map, path, direction);
+              }
+            }
+          }
+        }
+        path.pop();
+      };
+      return dfs(snake.head(), destination, this.shortestPathTo(destination, hamiltonian, 'returnVisited'), []);
+    },
+
     //extension of the shortest path until all positions are visited
     longestPathTo(destination) {
       var path = this.shortestPathTo(destination);
-      if (path && path.length > 0) {
+      if (path) {
         var visited = new Set();
         var current = { x: snake.head().x, y: snake.head().y };
         visited.add(current.x + '-' + current.y);
@@ -533,8 +596,8 @@
             i++;
           }
         }
+        return path;
       }
-      return path;
     },
 
     //see https://en.wikipedia.org/wiki/Hamiltonian_path
@@ -549,7 +612,7 @@
       };
       clear();
 
-      var path = this.longestPathTo(snake.tailEnd());
+      var path = this.longestPathTo(snake.tailEnd(), options.hamiltonianCycleBuildTryCount - tryCount);
       if (!path || path.length < 1) {
         return false;
       }
@@ -594,7 +657,7 @@
       }
 
       var shortcut = ai.shortestPathTo(position, 'hamiltonian');
-      if (shortcut && shortcut.length > 0) {
+      if (shortcut) {
         var newSnake = [];
         for (var i = 0; i < snake.body.length; i++) {
           newSnake.push(snake.body[i]);
