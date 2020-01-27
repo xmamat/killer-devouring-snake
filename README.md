@@ -41,7 +41,7 @@ This is the solution we came up with:
     - the snake head cannot overlap the tail nor pass through Hamiltonian indices that are between the previous head and tail end positions;
 3. if 2. is not possible either, just follow the initial Hamiltonian cycle.
 
-With that we achieved about 75% gain on the move count vs a basic Hamiltonian cycle without loosing a single game.
+With that we achieved about 75% reduction on the move count vs a basic Hamiltonian cycle without loosing a single game.
 
 [demo]: https://xmamat.github.io/killer-devouring-snake/
 [wiki-snake]: https://en.wikipedia.org/wiki/Snake_(video_game)
